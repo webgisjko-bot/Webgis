@@ -69,6 +69,44 @@ html, body, #map {
 }
 
 </style>
+    <style>
+
+#coordSearch{
+    position:absolute;
+    top:70px;
+    left:60px;
+    z-index:9999;
+
+    display:flex;
+
+    background:white;
+    border-radius:12px;
+    overflow:hidden;
+
+    box-shadow:0 3px 12px rgba(0,0,0,.25);
+}
+
+#coordInput{
+    width:320px;
+    border:none;
+    padding:12px;
+    font-size:14px;
+    outline:none;
+}
+
+#coordSearch button{
+    border:none;
+    background:white;
+    cursor:pointer;
+    padding:0 15px;
+    font-size:18px;
+}
+
+#coordSearch button:hover{
+    background:#f0f0f0;
+}
+
+</style>
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -168,6 +206,122 @@ setTimeout(function(){
 
 },1000);
 </script>
+<script>
 
+let coordMarker = null;
+
+function dmsToDecimal(d,m,s,dir){
+
+    let dec =
+        parseFloat(d) +
+        parseFloat(m)/60 +
+        parseFloat(s)/3600;
+
+    if(dir=="S" || dir=="W"){
+        dec = -dec;
+    }
+
+    return dec;
+}
+
+function searchCoordinate(){
+
+    let input =
+        document.getElementById("coordInput")
+        .value
+        .trim();
+
+    let lat, lon;
+
+    if(input.includes(",")){
+
+        let p = input.split(",");
+
+        lat = parseFloat(p[0]);
+        lon = parseFloat(p[1]);
+
+        if(!isNaN(lat) && !isNaN(lon)){
+            zoomToCoordinate(lat,lon);
+            return;
+        }
+    }
+
+    let regex =
+    /(\d+)[°]\s*(\d+)'?\s*([\d.]+)"?\s*([NS]).*?(\d+)[°]\s*(\d+)'?\s*([\d.]+)"?\s*([EW])/i;
+
+    let m = input.match(regex);
+
+    if(m){
+
+        lat = dmsToDecimal(
+            m[1],m[2],m[3],m[4].toUpperCase()
+        );
+
+        lon = dmsToDecimal(
+            m[5],m[6],m[7],m[8].toUpperCase()
+        );
+
+        zoomToCoordinate(lat,lon);
+        return;
+    }
+
+    alert("Format koordinat tidak dikenali");
+}
+
+function zoomToCoordinate(lat,lon){
+
+    let coordinate =
+        ol.proj.fromLonLat([lon,lat]);
+
+    map.getView().animate({
+        center:coordinate,
+        zoom:18,
+        duration:1200
+    });
+
+    if(coordMarker){
+        map.removeOverlay(coordMarker);
+    }
+
+    let marker =
+        document.createElement("div");
+
+    marker.innerHTML="📍";
+
+    marker.style.fontSize="36px";
+
+    coordMarker = new ol.Overlay({
+        position:coordinate,
+        element:marker
+    });
+
+    map.addOverlay(coordMarker);
+
+    alert(
+        "Latitude : " + lat.toFixed(6) +
+        "\nLongitude : " + lon.toFixed(6)
+    );
+}
+
+document
+.getElementById("coordInput")
+.addEventListener("keypress",function(e){
+
+    if(e.key==="Enter"){
+        searchCoordinate();
+    }
+
+});
+
+</script>
 </body>
+    <div id="coordSearch">
+    <input type="text"
+           id="coordInput"
+           placeholder="Cari koordinat (DD atau DMS)...">
+
+    <button onclick="searchCoordinate()">
+        🔍
+    </button>
+</div>
 </html>
